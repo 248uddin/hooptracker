@@ -20,7 +20,7 @@ def search_teams(name: str = Query(..., min_length=2)):
 @router.get("/{team_id}/roster", summary="Get team roster")
 def get_roster(
     team_id: int,
-    season: str = Query("2024-25"),
+    season: str = Query("2025-26"),
 ):
     try:
         return nba_service.get_team_roster(team_id, season)
@@ -31,7 +31,7 @@ def get_roster(
 @router.get("/{team_id}/gamelog", summary="Get team game log")
 def get_team_game_log(
     team_id: int,
-    season: str = Query("2024-25"),
+    season: str = Query("2025-26"),
 ):
     try:
         return nba_service.get_team_game_log(team_id, season)

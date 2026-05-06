@@ -56,7 +56,10 @@ def get_player_career_stats(player_id: int) -> dict:
     cached = cache.get(key)
     if cached:
         return cached
-    data = playercareerstats.PlayerCareerStats(player_id=player_id).get_dict()
+    data = playercareerstats.PlayerCareerStats(
+        player_id=player_id,
+        per_mode36="PerGame"
+    ).get_dict()
     cache.set(key, data, ttl=3600)
     return data
 

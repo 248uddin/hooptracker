@@ -6,7 +6,7 @@ router = APIRouter()
 
 @router.get("/", summary="Get league standings")
 def get_standings(
-    season: str = Query("2024-25"),
+    season: str = Query("2025-26"),
 ):
     try:
         return nba_service.get_standings(season)

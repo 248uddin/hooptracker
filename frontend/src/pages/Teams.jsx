@@ -1,6 +1,40 @@
 import { useEffect, useState } from "react";
 import { getAllTeams, getTeamRoster, getTeamGameLog } from "../api/nbaApi";
 
+const TEAM_COLORS = {
+  ATL: "#C1071E", BOS: "#007A33", BKN: "#000000", CHA: "#1D1160",
+  CHI: "#CE1141", CLE: "#860038", DAL: "#00538C", DEN: "#0E2240",
+  DET: "#C8102E", GSW: "#1D428A", HOU: "#CE1141", IND: "#002D62",
+  LAC: "#C8102E", LAL: "#552583", MEM: "#5D76A9", MIA: "#98002E",
+  MIL: "#00471B", MIN: "#0C2340", NOP: "#0C2340", NYK: "#F58426",
+  OKC: "#007AC1", ORL: "#0077C0", PHI: "#006BB6", PHX: "#1D1160",
+  POR: "#E03A3E", SAC: "#5A2D81", SAS: "#C4CED4", TOR: "#CE1141",
+  UTA: "#002B5C", WAS: "#002B5C",
+};
+
+function TeamLogo({ teamId, tricode, size = 48 }) {
+  const [imgError, setImgError] = useState(false);
+  return imgError ? (
+    <div style={{
+      width: size, height: size, borderRadius: "50%",
+      background: TEAM_COLORS[tricode] || "#1d428a",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: size * 0.28, fontWeight: 900, color: "#fff",
+      fontFamily: "'Barlow Condensed', sans-serif",
+    }}>
+      {tricode}
+    </div>
+  ) : (
+    <img
+      src={`https://cdn.nba.com/logos/nba/${teamId}/global/L/logo.svg`}
+      alt={tricode}
+      width={size} height={size}
+      style={{ objectFit: "contain" }}
+      onError={() => setImgError(true)}
+    />
+  );
+}
+
 export default function Teams() {
   const [teams, setTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -18,18 +52,19 @@ export default function Teams() {
     setSelectedTeam(team);
     setRoster(null);
     setGameLog(null);
+    setView("roster");
     setLoading(true);
     try {
       const [rosterRes, gameLogRes] = await Promise.all([
         getTeamRoster(team.id, season),
         getTeamGameLog(team.id, season),
       ]);
-      const rosterRows = rosterRes.data?.resultSets?.[0]?.rowSet || [];
       const rosterHeaders = rosterRes.data?.resultSets?.[0]?.headers || [];
+      const rosterRows = rosterRes.data?.resultSets?.[0]?.rowSet || [];
       setRoster({ rows: rosterRows, headers: rosterHeaders });
 
-      const glRows = gameLogRes.data?.resultSets?.[0]?.rowSet || [];
       const glHeaders = gameLogRes.data?.resultSets?.[0]?.headers || [];
+      const glRows = gameLogRes.data?.resultSets?.[0]?.rowSet || [];
       setGameLog({ rows: glRows, headers: glHeaders });
     } catch {
       setRoster(null);
@@ -51,24 +86,35 @@ export default function Teams() {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-white mb-6">Teams</h1>
+    <div style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap');
+        .team-card {
+          background: #0a0e1a; border: 1px solid #1e2a4a; border-radius: 12px;
+          padding: 16px 12px; cursor: pointer; transition: all .2s;
+          display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        .team-card:hover { transform: translateY(-4px); box-shadow: 0 0 24px rgba(29,66,138,0.5); border-color: #1d428a; }
+        .tab-btn { background: none; border: none; cursor: pointer; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1.5px; padding: 10px 20px; border-radius: 8px; transition: all .15s; }
+        .tbl-row:hover { background: #1a2540 !important; }
+      `}</style>
+
+      <h1 style={{ fontSize: 32, fontWeight: 900, color: "#fff", letterSpacing: 1, marginBottom: 28, textTransform: "uppercase" }}>Teams</h1>
 
       {!selectedTeam ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
           {Object.entries(conferences).map(([conf, confTeams]) => (
             <div key={conf}>
-              <h2 className="text-hardwood font-bold text-lg mb-3">{conf}ern Conference</h2>
-              <div className="grid grid-cols-3 gap-2">
+              <div style={{ fontSize: 13, color: "#c8a96e", fontWeight: 700, letterSpacing: 3, marginBottom: 16, textTransform: "uppercase" }}>
+                {conf}ern Conference
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 12 }}>
                 {confTeams.map((team) => (
-                  <button
-                    key={team.id}
-                    onClick={() => handleSelectTeam(team)}
-                    className="bg-gray-800 hover:bg-nbaBlue border border-gray-700 hover:border-nbaBlue rounded-lg px-3 py-3 text-left transition-colors"
-                  >
-                    <p className="font-bold text-white text-sm">{team.abbreviation}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">{team.full_name}</p>
-                  </button>
+                  <div key={team.id} className="team-card" onClick={() => handleSelectTeam(team)}>
+                    <TeamLogo teamId={team.id} tricode={team.abbreviation} size={52} />
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", letterSpacing: 1 }}>{team.abbreviation}</div>
+                    <div style={{ fontSize: 11, color: "#5a6a8a", textAlign: "center", fontFamily: "'Barlow', sans-serif", lineHeight: 1.3 }}>{team.full_name}</div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -77,46 +123,45 @@ export default function Teams() {
       ) : (
         <div>
           {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
+          <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 28, background: "#0a0e1a", border: "1px solid #1e2a4a", borderRadius: 16, padding: "20px 24px" }}>
             <button
               onClick={() => setSelectedTeam(null)}
-              className="text-gray-400 hover:text-white text-sm"
+              style={{ background: "none", border: "none", color: "#5a6a8a", cursor: "pointer", fontSize: 13, fontFamily: "'Barlow', sans-serif", letterSpacing: 1 }}
             >
-              ← Back to teams
+              ← BACK
             </button>
-            <h2 className="text-xl font-bold text-hardwood">{selectedTeam.full_name}</h2>
+            <div style={{ width: 1, height: 40, background: "#1e2a4a" }} />
+            <TeamLogo teamId={selectedTeam.id} tricode={selectedTeam.abbreviation} size={64} />
+            <div>
+              <div style={{ fontSize: 11, color: "#c8a96e", fontWeight: 700, letterSpacing: 2, marginBottom: 4 }}>{season} SEASON</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "#fff", textTransform: "uppercase", letterSpacing: 1 }}>{selectedTeam.full_name}</div>
+            </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-3 mb-6">
-            <button
-              onClick={() => setView("roster")}
-              className={`px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                view === "roster" ? "bg-nbaBlue text-white" : "bg-gray-800 text-gray-400 hover:text-white"
-              }`}
-            >
-              Roster
-            </button>
-            <button
-              onClick={() => setView("gamelog")}
-              className={`px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                view === "gamelog" ? "bg-nbaBlue text-white" : "bg-gray-800 text-gray-400 hover:text-white"
-              }`}
-            >
-              Game Log
-            </button>
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            {[["roster", "ROSTER"], ["gamelog", "GAME LOG"]].map(([key, label]) => (
+              <button
+                key={key}
+                className="tab-btn"
+                onClick={() => setView(key)}
+                style={{ background: view === key ? "#1d428a" : "#0d1529", color: view === key ? "#fff" : "#5a6a8a", border: `1px solid ${view === key ? "#1d428a" : "#1e2a4a"}` }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          {loading && <p className="text-gray-400">Loading...</p>}
+          {loading && <p style={{ color: "#5a6a8a", letterSpacing: 2 }}>LOADING...</p>}
 
           {/* Roster Table */}
           {!loading && view === "roster" && roster && (
-            <div className="overflow-x-auto rounded-xl">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-nbaBlue text-white">
-                  <tr>
+            <div style={{ background: "#0a0e1a", border: "1px solid #1e2a4a", borderRadius: 16, overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                <thead>
+                  <tr style={{ background: "#1d428a" }}>
                     {rosterCols.map((col) => (
-                      <th key={col} className="px-3 py-2 font-semibold">{col}</th>
+                      <th key={col} style={{ padding: "12px 14px", color: "#fff", fontWeight: 700, letterSpacing: 1, textAlign: "left" }}>{col}</th>
                     ))}
                   </tr>
                 </thead>
@@ -124,9 +169,11 @@ export default function Teams() {
                   {roster.rows.map((row, i) => {
                     const obj = Object.fromEntries(roster.headers.map((h, j) => [h, row[j]]));
                     return (
-                      <tr key={i} className={i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"}>
+                      <tr key={i} className="tbl-row" style={{ background: i % 2 === 0 ? "#0d1529" : "#0a0e1a" }}>
                         {rosterCols.map((col) => (
-                          <td key={col} className="px-3 py-2 text-gray-200">{obj[col] ?? "—"}</td>
+                          <td key={col} style={{ padding: "10px 14px", color: col === "PLAYER" ? "#fff" : "#9ca3af", fontWeight: col === "PLAYER" ? 700 : 400 }}>
+                            {obj[col] ?? "—"}
+                          </td>
                         ))}
                       </tr>
                     );
@@ -138,12 +185,12 @@ export default function Teams() {
 
           {/* Game Log Table */}
           {!loading && view === "gamelog" && gameLog && (
-            <div className="overflow-x-auto rounded-xl">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-nbaBlue text-white">
-                  <tr>
+            <div style={{ background: "#0a0e1a", border: "1px solid #1e2a4a", borderRadius: 16, overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                <thead>
+                  <tr style={{ background: "#1d428a" }}>
                     {gameLogCols.map((col) => (
-                      <th key={col} className="px-3 py-2 font-semibold">{col}</th>
+                      <th key={col} style={{ padding: "12px 14px", color: "#fff", fontWeight: 700, letterSpacing: 1, textAlign: "left" }}>{col}</th>
                     ))}
                   </tr>
                 </thead>
@@ -151,9 +198,13 @@ export default function Teams() {
                   {gameLog.rows.map((row, i) => {
                     const obj = Object.fromEntries(gameLog.headers.map((h, j) => [h, row[j]]));
                     return (
-                      <tr key={i} className={i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"}>
+                      <tr key={i} className="tbl-row" style={{ background: i % 2 === 0 ? "#0d1529" : "#0a0e1a" }}>
                         {gameLogCols.map((col) => (
-                          <td key={col} className={`px-3 py-2 ${col === "WL" ? (obj[col] === "W" ? "text-green-400" : "text-red-400") : "text-gray-200"}`}>
+                          <td key={col} style={{
+                            padding: "10px 14px",
+                            color: col === "WL" ? (obj[col] === "W" ? "#22c55e" : "#ef4444") : col === "GAME_DATE" ? "#c8a96e" : "#9ca3af",
+                            fontWeight: col === "WL" || col === "GAME_DATE" ? 700 : 400,
+                          }}>
                             {col === "FG_PCT" && obj[col] ? (parseFloat(obj[col]) * 100).toFixed(1) + "%" : obj[col] ?? "—"}
                           </td>
                         ))}

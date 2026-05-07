@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from routers import games, players, teams, standings
+from routers import games, players, teams, standings, news
 
 load_dotenv()
 
@@ -24,6 +24,7 @@ app.include_router(games.router,     prefix="/games",     tags=["Games"])
 app.include_router(players.router,   prefix="/players",   tags=["Players"])
 app.include_router(teams.router,     prefix="/teams",     tags=["Teams"])
 app.include_router(standings.router, prefix="/standings", tags=["Standings"])
+app.include_router(news.router, prefix="/news", tags=["News"])
 
 
 @app.get("/", tags=["Health"])

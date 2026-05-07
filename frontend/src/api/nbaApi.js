@@ -13,3 +13,6 @@ export const getAllTeams = () => api.get("/teams");
 export const getTeamRoster = (id, season) => api.get(`/teams/${id}/roster?season=${season}`);
 export const getTeamGameLog = (id, season) => api.get(`/teams/${id}/gamelog?season=${season}`);
 export const getStandings = (season) => api.get(`/standings?season=${season}`);
+export const getNews = () => api.get("/news/news");
+export const getInjuries = () => api.get("/news/injuries");
+export const getTransactions = () => api.get("/news/transactions");

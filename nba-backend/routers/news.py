@@ -7,10 +7,9 @@ router = APIRouter()
 
 FEEDS = {
     "news": "https://www.espn.com/espn/rss/nba/news",
-    "injuries": "https://www.rotowire.com/basketball/rss-player-news.php",
+    "injuries": "https://www.espn.com/espn/rss/nba/news",
     "transactions": "https://www.espn.com/espn/rss/nba/news",
 }
-
 def parse_rss(xml_text: str) -> list[dict]:
     root = ET.fromstring(xml_text)
     channel = root.find("channel")

@@ -1,13 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,800&family=Barlow:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background-color: #1a1a2e;
-  color: white;
-  font-family: 'Segoe UI', sans-serif;
+  background: #0c0c0f;
+  color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  min-height: 100vh;
 }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0c0c0f; }
+::-webkit-scrollbar-thumb { background: rgba(200,169,110,0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(200,169,110,0.6); }

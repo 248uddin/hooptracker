@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const api = axios.create({ baseURL: "https://hooptracker-api.onrender.com" });
+const api = axios.create({ baseURL: "https://hooptracker-api.onrender.com/" });
 
 export const getLiveScores = () => api.get("/games/live");
 export const getBoxscore = (gameId) => api.get(`/games/${gameId}/boxscore`);

@@ -34,7 +34,6 @@ NBAStatsHTTP.HEADERS = {
 load_dotenv()
 TTL = int(os.getenv("CACHE_TTL_SECONDS", 30))
 
-
 def get_live_scoreboard() -> dict:
     key = "live_scoreboard"
     cached = cache.get(key)
@@ -51,8 +50,7 @@ def get_live_scoreboard() -> dict:
         cache.set(key, data, ttl=TTL)
         return data
     except Exception as e:
-        return {"scoreboard": {"games": []}, "error": str(e)}
-
+        return {"resultSets": [], "error": str(e)}
 
 def get_game_boxscore(game_id: str) -> dict:
     key = f"boxscore_{game_id}"

@@ -36,7 +36,7 @@ function Logo({ tricode, size = 44 }) {
 
 function NewsCard({ item, type }) {
   return (
-    <a href={item.link} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none", background: "rgba(13,20,40,0.7)", border: `1px solid rgba(255,255,255,0.06)`, borderLeft: `3px solid ${type === "injuries" ? "#ef4444" : "#1d428a"}`, borderRadius: 8, padding: "11px 14px", transition: "all .2s" }}
+    <a href={item.link} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none", background: "rgba(13,20,40,0.7)", border: "1px solid rgba(255,255,255,0.06)", borderLeft: `3px solid ${type === "injuries" ? "#ef4444" : "#1d428a"}`, borderRadius: 8, padding: "11px 14px", transition: "all .2s" }}
       onMouseEnter={e => e.currentTarget.style.borderColor = "#c8a96e"}
       onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; e.currentTarget.style.borderLeftColor = type === "injuries" ? "#ef4444" : "#1d428a"; }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -51,6 +51,31 @@ function NewsCard({ item, type }) {
   );
 }
 
+function parseScoreboard(data) {
+  const resultSets = data?.resultSets || [];
+  const gameHeader = resultSets.find(rs => rs.name === "GameHeader");
+  const lineScore = resultSets.find(rs => rs.name === "LineScore");
+  if (!gameHeader || !lineScore) return [];
+  const ghRows = gameHeader.rowSet.map(row =>
+    Object.fromEntries(gameHeader.headers.map((h, i) => [h, row[i]]))
+  );
+  const lsRows = lineScore.rowSet.map(row =>
+    Object.fromEntries(lineScore.headers.map((h, i) => [h, row[i]]))
+  );
+  return ghRows.map(game => {
+    const teams = lsRows.filter(r => r.GAME_ID === game.GAME_ID);
+    const away = teams[0];
+    const home = teams[1];
+    return {
+      gameId: game.GAME_ID,
+      gameStatusText: game.GAME_STATUS_TEXT,
+      arena: { arenaName: game.ARENA_NAME },
+      awayTeam: { teamId: away?.TEAM_ID, teamTricode: away?.TEAM_ABBREVIATION, score: away?.PTS },
+      homeTeam: { teamId: home?.TEAM_ID, teamTricode: home?.TEAM_ABBREVIATION, score: home?.PTS },
+    };
+  });
+}
+
 export default function LiveScores() {
   const [games, setGames] = useState([]);
   const [news, setNews] = useState([]);
@@ -62,20 +87,32 @@ export default function LiveScores() {
   const [featIdx, setFeatIdx] = useState(0);
 
   const fetchScores = () => {
-    getLiveScores().then(r => { setGames(r.data?.scoreboard?.games || []); setLastUpdated(new Date()); }).catch(() => {}).finally(() => setGLoading(false));
+    getLiveScores()
+      .then(r => {
+        const parsed = parseScoreboard(r.data);
+        setGames(parsed);
+        setLastUpdated(new Date());
+      })
+      .catch(() => {})
+      .finally(() => setGLoading(false));
   };
+
   const fetchNews = () => {
     setNLoading(true);
-    Promise.all([getNews(), getInjuries()]).then(([n, inj]) => {
-      const all = n.data || [];
-      const kw = ["injur","strain","sprain","out","day-to-day","sidelined","surgery","knee","ankle","hamstring","ruled out"];
-      setNews(all);
-      setInjuries(all.filter(i => kw.some(k => i.title?.toLowerCase().includes(k) || i.description?.toLowerCase().includes(k))));
-    }).catch(() => {}).finally(() => setNLoading(false));
+    Promise.all([getNews(), getInjuries()])
+      .then(([n]) => {
+        const all = n.data || [];
+        const kw = ["injur","strain","sprain","out","day-to-day","sidelined","surgery","knee","ankle","hamstring","ruled out"];
+        setNews(all);
+        setInjuries(all.filter(i => kw.some(k => i.title?.toLowerCase().includes(k) || i.description?.toLowerCase().includes(k))));
+      })
+      .catch(() => {})
+      .finally(() => setNLoading(false));
   };
 
   useEffect(() => {
-    fetchScores(); fetchNews();
+    fetchScores();
+    fetchNews();
     const si = setInterval(fetchScores, 30000);
     const ni = setInterval(fetchNews, 300000);
     return () => { clearInterval(si); clearInterval(ni); };
@@ -108,23 +145,21 @@ export default function LiveScores() {
               <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", letterSpacing: 2 }}>LIVE</span>
             </div>
           ) : null}
-          <img src={`https://cdn.nba.com/headshots/nba/latest/1040x760/${feat.awayTeam?.players?.[0]?.personId || "fallback"}.png`} style={{ position: "absolute", left: -10, bottom: 0, height: 155, objectFit: "contain", objectPosition: "bottom", opacity: 0.25 }} onError={e => e.target.style.display = "none"} />
-          <img src={`https://cdn.nba.com/headshots/nba/latest/1040x760/${feat.homeTeam?.players?.[0]?.personId || "fallback"}.png`} style={{ position: "absolute", right: -10, bottom: 0, height: 155, objectFit: "contain", objectPosition: "bottom", opacity: 0.25 }} onError={e => e.target.style.display = "none"} />
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: 2, textTransform: "uppercase" }}>{feat.gameStatusText}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                <Logo tricode={feat.awayTeam.teamTricode} size={48} />
-                <div style={{ fontSize: 14, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>{feat.awayTeam.teamTricode}</div>
+                <Logo tricode={feat.awayTeam?.teamTricode} size={48} />
+                <div style={{ fontSize: 14, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>{feat.awayTeam?.teamTricode}</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ fontSize: 48, fontWeight: 900, color: feat.awayTeam.score > feat.homeTeam.score ? "#fff" : "rgba(255,255,255,0.3)", lineHeight: 1 }}>{feat.awayTeam.score ?? "—"}</div>
+                <div style={{ fontSize: 48, fontWeight: 900, color: feat.awayTeam?.score > feat.homeTeam?.score ? "#fff" : "rgba(255,255,255,0.3)", lineHeight: 1 }}>{feat.awayTeam?.score ?? "—"}</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.2)" }}>—</div>
-                <div style={{ fontSize: 48, fontWeight: 900, color: feat.homeTeam.score > feat.awayTeam.score ? "#fff" : "rgba(255,255,255,0.3)", lineHeight: 1 }}>{feat.homeTeam.score ?? "—"}</div>
+                <div style={{ fontSize: 48, fontWeight: 900, color: feat.homeTeam?.score > feat.awayTeam?.score ? "#fff" : "rgba(255,255,255,0.3)", lineHeight: 1 }}>{feat.homeTeam?.score ?? "—"}</div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                <Logo tricode={feat.homeTeam.teamTricode} size={48} />
-                <div style={{ fontSize: 14, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>{feat.homeTeam.teamTricode}</div>
+                <Logo tricode={feat.homeTeam?.teamTricode} size={48} />
+                <div style={{ fontSize: 14, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>{feat.homeTeam?.teamTricode}</div>
               </div>
             </div>
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: 1, fontFamily: "'Barlow',sans-serif" }}>{feat.arena?.arenaName}</div>
@@ -151,10 +186,11 @@ export default function LiveScores() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 10 }}>
             {games.map((g, i) => {
               const isLive = g.gameStatusText?.includes("Q") || g.gameStatusText?.includes("Half");
-              const awayWin = g.awayTeam.score > g.homeTeam.score;
-              const homeWin = g.homeTeam.score > g.awayTeam.score;
+              const awayWin = g.awayTeam?.score > g.homeTeam?.score;
+              const homeWin = g.homeTeam?.score > g.awayTeam?.score;
               return (
-                <div key={g.gameId} onClick={() => setFeatIdx(i)} style={{ background: "rgba(13,20,40,0.8)", border: `1px solid ${isLive ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.07)"}`, borderRadius: 10, padding: "12px 16px", cursor: "pointer", transition: "all .2s" }}
+                <div key={g.gameId} onClick={() => setFeatIdx(i)}
+                  style={{ background: "rgba(13,20,40,0.8)", border: `1px solid ${isLive ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.07)"}`, borderRadius: 10, padding: "12px 16px", cursor: "pointer", transition: "all .2s" }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(200,169,110,0.4)"}
                   onMouseLeave={e => e.currentTarget.style.borderColor = isLive ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.07)"}>
                   <div style={{ textAlign: "center", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
@@ -163,15 +199,15 @@ export default function LiveScores() {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                      <Logo tricode={g.awayTeam.teamTricode} size={40} />
-                      <div style={{ fontSize: 12, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>{g.awayTeam.teamTricode}</div>
-                      <div style={{ fontSize: 30, fontWeight: 900, color: awayWin ? "#fff" : "rgba(255,255,255,0.3)", lineHeight: 1 }}>{g.awayTeam.score ?? "—"}</div>
+                      <Logo tricode={g.awayTeam?.teamTricode} size={40} />
+                      <div style={{ fontSize: 12, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>{g.awayTeam?.teamTricode}</div>
+                      <div style={{ fontSize: 30, fontWeight: 900, color: awayWin ? "#fff" : "rgba(255,255,255,0.3)", lineHeight: 1 }}>{g.awayTeam?.score ?? "—"}</div>
                     </div>
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", fontWeight: 700 }}>VS</div>
                     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                      <Logo tricode={g.homeTeam.teamTricode} size={40} />
-                      <div style={{ fontSize: 12, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>{g.homeTeam.teamTricode}</div>
-                      <div style={{ fontSize: 30, fontWeight: 900, color: homeWin ? "#fff" : "rgba(255,255,255,0.3)", lineHeight: 1 }}>{g.homeTeam.score ?? "—"}</div>
+                      <Logo tricode={g.homeTeam?.teamTricode} size={40} />
+                      <div style={{ fontSize: 12, fontWeight: 900, color: "#fff", letterSpacing: 1 }}>{g.homeTeam?.teamTricode}</div>
+                      <div style={{ fontSize: 30, fontWeight: 900, color: homeWin ? "#fff" : "rgba(255,255,255,0.3)", lineHeight: 1 }}>{g.homeTeam?.score ?? "—"}</div>
                     </div>
                   </div>
                   <div style={{ textAlign: "center", marginTop: 8, fontSize: 10, color: "rgba(255,255,255,0.15)", fontFamily: "'Barlow',sans-serif" }}>{g.arena?.arenaName}</div>
@@ -189,7 +225,9 @@ export default function LiveScores() {
           <button key={k} onClick={() => setTab(k)} style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", padding: "7px 16px", borderRadius: 6, border: `1px solid ${tab === k ? "#1d428a" : "rgba(255,255,255,0.08)"}`, background: tab === k ? "#1d428a" : "transparent", color: tab === k ? "#fff" : "rgba(255,255,255,0.3)", cursor: "pointer" }}>{l}</button>
         ))}
       </div>
-      {nLoading ? <div style={{ color: "rgba(255,255,255,0.3)", letterSpacing: 2, fontSize: 11 }}>LOADING...</div> : (
+      {nLoading ? (
+        <div style={{ color: "rgba(255,255,255,0.3)", letterSpacing: 2, fontSize: 11 }}>LOADING...</div>
+      ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 8 }}>
           {feedItems.map((item, i) => <NewsCard key={i} item={item} type={tab} />)}
         </div>

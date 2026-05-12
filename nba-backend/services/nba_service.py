@@ -40,12 +40,18 @@ def get_live_scoreboard() -> dict:
     cached = cache.get(key)
     if cached:
         return cached
-    from nba_api.live.nba.endpoints import scoreboard
-    import nba_api
-    nba_api.library.http.TIMEOUT = 60
-    data = scoreboard.ScoreBoard().get_dict()
-    cache.set(key, data, ttl=TTL)
-    return data
+    try:
+        from nba_api.stats.endpoints import scoreboardv2
+        from datetime import date
+        data = scoreboardv2.ScoreboardV2(
+            game_date=date.today().strftime("%m/%d/%Y"),
+            league_id="00",
+            day_offset=0
+        ).get_dict()
+        cache.set(key, data, ttl=TTL)
+        return data
+    except Exception as e:
+        return {"scoreboard": {"games": []}, "error": str(e)}
 
 
 def get_game_boxscore(game_id: str) -> dict:

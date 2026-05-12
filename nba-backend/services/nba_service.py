@@ -4,7 +4,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import cache
 
 from dotenv import load_dotenv
-from nba_api.live.nba.endpoints import scoreboard, boxscore
+import requests
+from datetime import date
 from nba_api.stats.endpoints import (
     playercareerstats,
     commonplayerinfo,
@@ -16,23 +17,20 @@ from nba_api.stats.endpoints import (
 )
 from nba_api.stats.static import players, teams
 
-from nba_api.library.http import NBAStatsHTTP
+load_dotenv()
+TTL = int(os.getenv("CACHE_TTL_SECONDS", 30))
 
-NBAStatsHTTP.HEADERS = {
-    "Host": "stats.nba.com",
+NBA_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Referer": "https://www.nba.com/",
+    "Origin": "https://www.nba.com",
     "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.5",
     "x-nba-stats-origin": "stats",
     "x-nba-stats-token": "true",
-    "Origin": "https://www.nba.com",
-    "Referer": "https://www.nba.com/",
     "Connection": "keep-alive",
 }
 
-load_dotenv()
-TTL = int(os.getenv("CACHE_TTL_SECONDS", 30))
 
 def get_live_scoreboard() -> dict:
     key = "live_scoreboard"
@@ -40,26 +38,28 @@ def get_live_scoreboard() -> dict:
     if cached:
         return cached
     try:
-        from nba_api.stats.endpoints import scoreboardv2
-        from datetime import date
-        data = scoreboardv2.ScoreboardV2(
-            game_date=date.today().strftime("%m/%d/%Y"),
-            league_id="00",
-            day_offset=0
-        ).get_dict()
+        url = f"https://stats.nba.com/stats/scoreboardv2?DayOffset=0&GameDate={date.today().strftime('%m/%d/%Y')}&LeagueID=00"
+        res = requests.get(url, headers=NBA_HEADERS, timeout=15)
+        data = res.json()
         cache.set(key, data, ttl=TTL)
         return data
     except Exception as e:
         return {"resultSets": [], "error": str(e)}
+
 
 def get_game_boxscore(game_id: str) -> dict:
     key = f"boxscore_{game_id}"
     cached = cache.get(key)
     if cached:
         return cached
-    data = boxscore.BoxScore(game_id=game_id).get_dict()
-    cache.set(key, data, ttl=TTL)
-    return data
+    try:
+        url = f"https://stats.nba.com/stats/boxscoresummaryv2?GameID={game_id}"
+        res = requests.get(url, headers=NBA_HEADERS, timeout=15)
+        data = res.json()
+        cache.set(key, data, ttl=TTL)
+        return data
+    except Exception as e:
+        return {"resultSets": [], "error": str(e)}
 
 
 def search_players(name: str) -> list[dict]:

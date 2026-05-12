@@ -25,6 +25,9 @@ def get_live_scoreboard() -> dict:
     cached = cache.get(key)
     if cached:
         return cached
+    from nba_api.live.nba.endpoints import scoreboard
+    import nba_api
+    nba_api.library.http.TIMEOUT = 60
     data = scoreboard.ScoreBoard().get_dict()
     cache.set(key, data, ttl=TTL)
     return data

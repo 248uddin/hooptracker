@@ -86,11 +86,25 @@ export default function LiveScores() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [featIdx, setFeatIdx] = useState(0);
 
-  const fetchScores = () => {
+const fetchScores = () => {
     getLiveScores()
       .then(r => {
-        const parsed = parseScoreboard(r.data);
-        setGames(parsed);
+        const games = (r.data?.data || []).map(g => ({
+          gameId: g.id,
+          gameStatusText: g.status === "Final" ? "FINAL" : g.status === "in progress" ? `Q${g.period} ${g.time}` : g.time || "Scheduled",
+          arena: { arenaName: g.arena || "" },
+          awayTeam: {
+            teamId: g.visitor_team?.id,
+            teamTricode: g.visitor_team?.abbreviation,
+            score: g.visitor_team_score,
+          },
+          homeTeam: {
+            teamId: g.home_team?.id,
+            teamTricode: g.home_team?.abbreviation,
+            score: g.home_team_score,
+          },
+        }));
+        setGames(games);
         setLastUpdated(new Date());
       })
       .catch(() => {})

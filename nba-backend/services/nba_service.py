@@ -1,4 +1,8 @@
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import cache
+
 from dotenv import load_dotenv
 from nba_api.live.nba.endpoints import scoreboard, boxscore
 from nba_api.stats.endpoints import (
@@ -11,7 +15,6 @@ from nba_api.stats.endpoints import (
     commonteamroster,
 )
 from nba_api.stats.static import players, teams
-import cache
 
 load_dotenv()
 TTL = int(os.getenv("CACHE_TTL_SECONDS", 30))
